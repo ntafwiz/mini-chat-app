@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mini Chat App</title>
+
+  <!-- CSS Styling -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f2f2f2;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #chat-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0px 0px 8px rgba(0,0,0,0.1);
+    }
+
+    input[type="text"], select {
+      padding: 8px;
+      margin: 5px;
+      width: calc(100% - 20px);
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+
+    li {
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+    }
+
+    li:last-child {
+      border-bottom: none;
+    }
+
+    img.avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mini Chat App</h1>
+  <div id="chat-container">
+    <input type="text" id="username" placeholder="Your name" required><br>
+    <input type="text" id="avatar" placeholder="Avatar URL (optional)"><br>
+    <select id="room">
+      <option value="general">General</option>
+      <option value="tech">Tech</option>
+      <option value="random">Random</option>
+    </select><br>
+    <input type="text" id="message" placeholder="Message" required>
+    <button onclick="sendMessage()">Send</button>
+
+    <ul id="messages"></ul>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // Replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_KEY",
+      authDomain: "your-project.firebaseapp.com",
+      databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+      projectId: "your-project",
+      storageBucket: "your-project.appspot.com",
+      messagingSenderId: "YOUR_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function getRoomRef() {
+      const room = document.getElementById('room').value;
+      return db.ref('messages/' + room);
+    }
+
+    function sendMessage() {
+      const username = document.getElementById('username').value;
+      const message = document.getElementById('message').value;
+      if (!username || !message) return;
+
+      const avatar = document.getElementById('avatar').value || 'https://i.pravatar.cc/40';
+
+      getRoomRef().push({
+        username,
+        message,
+        timestamp: Date.now(),
+        avatar
+      });
+
+      document.getElementById('message').value = '';
+    }
+
+    function loadMessages() {
+      const messagesUl = document.getElementById('messages');
+      messagesUl.innerHTML = '';
+
+      const roomRef = getRoomRef();
+      roomRef.off(); // Remove previous listeners
+
+      roomRef.on('child_added', snapshot => {
+        const msg = snapshot.val();
+
+        const li = document.createElement('li');
+
+        const img = document.createElement('img');
+        img.src = msg.avatar;
+        img.className = 'avatar';
+        li.appendChild(img);
+
+        const time = new Date(msg.timestamp);
+        const hours = time.getHours().toString().padStart(2,'0');
+        const minutes = time.getMinutes().toString().padStart(2,'0');
+
+        const text = document.createTextNode(`${msg.username} [${hours}:${minutes}]: ${msg.message}`);
+        li.appendChild(text);
+
+        messagesUl.appendChild(li);
+        messagesUl.scrollTop = messagesUl.scrollHeight; // Scroll to bottom
+      });
+    }
+
+    // Load messages on initial page load
+    loadMessages();
+
+    // Reload messages when room changes
+    document.getElementById('room').addEventListener('change', loadMessages);
+  </script>
+</body>
+</html>
